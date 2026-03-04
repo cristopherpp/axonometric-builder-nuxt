@@ -1,0 +1,127 @@
+﻿<script setup lang="ts">
+import { ref } from 'vue';
+import type { BlockData, ProjectionId } from '~/types';
+import TechnicalSVG from '~/components/TechnicalSVG.vue';
+import AxonometricScene from '~/components/AxonometricScene.vue';
+
+const MIN_SIZE = 1;
+let nextBlockId = 1;
+
+const normalizeSize = (value: number) => {
+  if (!Number.isFinite(value)) return MIN_SIZE;
+  return Math.max(MIN_SIZE, value);
+};
+
+const toHexColor = (value: number) => `#${Math.floor(value).toString(16).padStart(6, '0')}`;
+
+const blocks = ref<BlockData[]>([
+  { id: nextBlockId++, x: 0, y: 0, z: 10, w: 20, d: 20, h: 20, color: '#3b82f6' }
+]);
+
+const mode = ref<ProjectionId>('iso');
+const coef = ref(0.5);
+const wireframe = ref(false);
+
+const form = ref({ w: 20, d: 20, h: 20, x: 0, y: 0, z: 0 });
+
+const addBlock = () => {
+  const w = normalizeSize(form.value.w);
+  const d = normalizeSize(form.value.d);
+  const h = normalizeSize(form.value.h);
+
+  blocks.value.push({
+    id: nextBlockId++,
+    x: Number(form.value.x) || 0,
+    y: Number(form.value.y) || 0,
+    z: (Number(form.value.z) || 0) + (h / 2),
+    w,
+    d,
+    h,
+    color: toHexColor(Math.random() * 0xffffff)
+  });
+
+  form.value.w = w;
+  form.value.d = d;
+  form.value.h = h;
+};
+
+const removeBlock = (id: number) => {
+  blocks.value = blocks.value.filter(b => b.id !== id);
+};
+</script>
+
+<template>
+  <div class="flex h-screen w-screen overflow-hidden bg-slate-900 text-white font-sans">
+    <aside class="w-80 bg-slate-800 border-r border-slate-700 flex flex-col z-10 shadow-xl overflow-y-auto">
+      <div class="p-5 border-b border-slate-700 bg-slate-800">
+        <h2 class="text-xl font-bold text-blue-400 mb-6">Lab. Geometria INEN</h2>
+
+        <div class="space-y-4 mb-6">
+          <div>
+            <label class="text-xs font-bold text-slate-400 uppercase">Sistema de proyeccion</label>
+            <select v-model="mode" class="w-full mt-1 bg-slate-700 border border-slate-600 rounded px-2 py-2 text-sm text-white">
+              <option value="iso">Isometrica (Ortogonal)</option>
+              <option value="cab">Caballera (Frente VM)</option>
+              <option value="mil">Militar (Planta VM)</option>
+            </select>
+          </div>
+
+          <div v-if="mode !== 'iso'" class="p-3 bg-blue-900/20 border border-blue-500/30 rounded">
+            <label class="text-xs text-blue-300 block mb-2">Coeficiente de reduccion: {{ coef }}</label>
+            <input type="range" min="0.25" max="1" step="0.05" v-model.number="coef" class="w-full" />
+          </div>
+        </div>
+
+        <button @click="wireframe = !wireframe" class="w-full py-2 text-xs border border-slate-600 rounded hover:bg-slate-700 transition">
+          Modo: {{ wireframe ? 'Alambrico' : 'Solido' }}
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <h3 class="text-xs font-bold text-slate-500 uppercase">Constructor</h3>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div class="flex flex-col"><label class="text-[10px] text-slate-400">W (X)</label><input type="number" v-model.number="form.w" class="bg-slate-700 p-1 text-xs rounded" /></div>
+          <div class="flex flex-col"><label class="text-[10px] text-slate-400">D (Y)</label><input type="number" v-model.number="form.d" class="bg-slate-700 p-1 text-xs rounded" /></div>
+          <div class="flex flex-col"><label class="text-[10px] text-slate-400">H (Z)</label><input type="number" v-model.number="form.h" class="bg-slate-700 p-1 text-xs rounded" /></div>
+
+          <div class="flex flex-col"><label class="text-[10px] text-slate-400">Pos X</label><input type="number" v-model.number="form.x" class="bg-slate-700 p-1 text-xs rounded" /></div>
+          <div class="flex flex-col"><label class="text-[10px] text-slate-400">Pos Y</label><input type="number" v-model.number="form.y" class="bg-slate-700 p-1 text-xs rounded" /></div>
+          <div class="flex flex-col"><label class="text-[10px] text-slate-400">Pos Z</label><input type="number" v-model.number="form.z" class="bg-slate-700 p-1 text-xs rounded" /></div>
+        </div>
+
+        <button @click="addBlock" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-bold shadow">+ Anadir bloque</button>
+
+        <div class="space-y-1 mt-4">
+          <div v-for="(b, idx) in blocks" :key="b.id" class="flex items-center gap-2 bg-slate-700 p-1.5 rounded text-xs">
+            <input type="color" v-model="b.color" class="w-5 h-5 rounded cursor-pointer border-none bg-transparent" />
+            <span class="flex-1 text-slate-300">Bloque {{ idx + 1 }}</span>
+            <button @click="removeBlock(b.id)" class="text-slate-400 hover:text-red-400 px-2 font-bold">x</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 grid grid-cols-2 grid-rows-2 gap-1 bg-slate-600 p-1">
+      <div class="bg-slate-50 relative border border-slate-400">
+        <span class="absolute top-2 left-2 text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 shadow-sm">ALZADO (Frente)</span>
+        <TechnicalSVG :blocks="blocks" view="front" />
+      </div>
+
+      <div class="bg-slate-50 relative border border-slate-400">
+        <span class="absolute top-2 left-2 text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 shadow-sm">PERFIL IZQUIERDO</span>
+        <TechnicalSVG :blocks="blocks" view="side" />
+      </div>
+
+      <div class="bg-slate-50 relative border border-slate-400">
+        <span class="absolute top-2 left-2 text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 shadow-sm">PLANTA (Superior)</span>
+        <TechnicalSVG :blocks="blocks" view="top" />
+      </div>
+
+      <div class="bg-slate-900 relative border border-slate-800">
+        <span class="absolute top-2 left-2 text-[10px] font-bold text-blue-300 bg-black/60 px-1.5 py-0.5 rounded shadow-sm z-10">AXONOMETRIA</span>
+        <AxonometricScene :blocks="blocks" :mode="mode" :coef="coef" :wireframe="wireframe" />
+      </div>
+    </main>
+  </div>
+</template>
