@@ -65,9 +65,11 @@ watch(() => [props.mode, cameraRef.value, controlsRef.value], () => {
 
 <template>
   <TresCanvas clear-color="#1e293b">
-    <TresOrthographicCamera ref="cameraRef" :zoom="8" :near="-2000" :far="2000" />
+    <!-- <TresOrthographicCamera ref="cameraRef" :zoom="1.35" :near="0.1" :far="4000" />
+    <OrbitControls ref="controlsRef" :enable-zoom="true" :enable-pan="true" :min-zoom="0.2" :max-zoom="25" /> -->
+    <TresOrthographicCamera ref="cameraRef" :zoom="0.03" :near="-2000" :far="4000" />
     <OrbitControls ref="controlsRef" />
-    
+
     <TresAmbientLight :intensity="0.7" />
     <TresDirectionalLight :position="[10, 20, 10]" :intensity="1.2" />
 
