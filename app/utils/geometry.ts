@@ -84,11 +84,11 @@ export function projectTo2D(blocks: BlockData[], view: ViewType, scale: number =
     ];
 
     return edges.map(([s, e], idx) => {
-      const pt1 = corners[s];
-      const pt2 = corners[e];
+      const pt1 = corners[s!];
+      const pt2 = corners[e!];
 
-      const c1uv = mapToView(pt1, view);
-      const c2uv = mapToView(pt2, view);
+      const c1uv = mapToView(pt1!, view);
+      const c2uv = mapToView(pt2!, view);
       const c1 = { u: CX + c1uv.u * scale, v: CY + c1uv.v * scale };
       const c2 = { u: CX + c2uv.u * scale, v: CY + c2uv.v * scale };
 

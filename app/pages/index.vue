@@ -21,6 +21,8 @@ const blocks = ref<BlockData[]>([
 const mode = ref<ProjectionId>('iso');
 const coef = ref(0.5);
 const wireframe = ref(false);
+const showOrthographicViews = ref(false);
+const showSettings = ref(false);
 
 const form = ref({ w: 20, d: 20, h: 20, x: 0, y: 0, z: 0 });
 
@@ -102,25 +104,65 @@ const removeBlock = (id: number) => {
       </div>
     </aside>
 
-    <main class="flex-1 grid grid-cols-2 grid-rows-2 gap-1 bg-slate-600 p-1">
-      <div class="bg-slate-50 relative border border-slate-400">
+    <main
+      class="flex-1 p-1 bg-slate-600"
+      :class="showOrthographicViews ? 'grid grid-cols-2 grid-rows-2 gap-1' : 'relative'"
+    >
+      <button
+        class="absolute top-3 right-3 z-20 px-3 py-1.5 text-xs font-semibold rounded border border-slate-500 bg-slate-900/85 text-slate-100 hover:bg-slate-800"
+        @click="showSettings = true"
+      >
+        Settings
+      </button>
+
+      <div v-if="showOrthographicViews" class="bg-slate-50 relative border border-slate-400">
         <span class="absolute top-2 left-2 text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 shadow-sm">ALZADO (Frente)</span>
         <TechnicalSVG :blocks="blocks" view="front" />
       </div>
 
-      <div class="bg-slate-50 relative border border-slate-400">
+      <div v-if="showOrthographicViews" class="bg-slate-50 relative border border-slate-400">
         <span class="absolute top-2 left-2 text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 shadow-sm">PERFIL IZQUIERDO</span>
         <TechnicalSVG :blocks="blocks" view="side" />
       </div>
 
-      <div class="bg-slate-50 relative border border-slate-400">
+      <div v-if="showOrthographicViews" class="bg-slate-50 relative border border-slate-400">
         <span class="absolute top-2 left-2 text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 shadow-sm">PLANTA (Superior)</span>
         <TechnicalSVG :blocks="blocks" view="top" />
       </div>
 
-      <div class="bg-slate-900 relative border border-slate-800">
+      <div
+        class="bg-slate-900 relative border border-slate-800"
+        :class="showOrthographicViews ? '' : 'h-full w-full'"
+      >
         <span class="absolute top-2 left-2 text-[10px] font-bold text-blue-300 bg-black/60 px-1.5 py-0.5 rounded shadow-sm z-10">AXONOMETRIA</span>
         <AxonometricScene :blocks="blocks" :mode="mode" :coef="coef" :wireframe="wireframe" />
+      </div>
+
+      <div
+        v-if="showSettings"
+        class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/70 p-4"
+        @click.self="showSettings = false"
+      >
+        <section class="w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
+          <header class="flex items-center justify-between border-b border-slate-700 px-4 py-3">
+            <h3 class="text-sm font-semibold text-slate-100">Visual Settings</h3>
+            <button class="text-slate-300 hover:text-white" @click="showSettings = false">x</button>
+          </header>
+          <div class="px-4 py-4 space-y-4">
+            <label class="flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-800/70 px-3 py-2">
+              <span class="text-sm text-slate-200">Show orthographic views</span>
+              <input v-model="showOrthographicViews" type="checkbox" class="h-4 w-4 accent-emerald-500" />
+            </label>
+            <p class="text-xs text-slate-400">
+              Inspired by CAD view-layout toggles: work in figure-only mode, then enable orthographic sheets when needed.
+            </p>
+          </div>
+          <footer class="flex justify-end border-t border-slate-700 px-4 py-3">
+            <button class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold hover:bg-blue-500" @click="showSettings = false">
+              Apply
+            </button>
+          </footer>
+        </section>
       </div>
     </main>
   </div>
