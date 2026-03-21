@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { projectTo2D } from '~/utils/geometry';
-import type { BlockData, ViewType } from '~/types';
+import type { FigureData, ViewType } from '~/types';
 
 const props = defineProps<{
-  blocks: BlockData[];
+  figures: FigureData[];
   view: ViewType;
 }>();
 
-const lines = computed(() => projectTo2D(props.blocks, props.view));
+const lines = computed(() => projectTo2D(props.figures, props.view));
 </script>
 
 <template>

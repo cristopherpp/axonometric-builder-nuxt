@@ -1,6 +1,6 @@
-// utils/geometry.ts
+﻿// utils/geometry.ts
 import * as THREE from 'three';
-import type { BlockData, ProjectionId, ViewType } from '~/types';
+import type { FigureData, ProjectionId, ViewType } from '~/types';
 
 /**
  * Generates Shear Matrices for Oblique Projections (Cavalier / Military).
@@ -10,33 +10,29 @@ export function getObliqueMatrix(mode: ProjectionId, coef: number): THREE.Matrix
   const m = new THREE.Matrix4();
   if (mode === 'iso') return m.identity();
 
-  const alpha = Math.PI / 4; // 45 degrees
+  const alpha = Math.PI / 4;
   const sCos = Math.cos(alpha) * coef;
-  const sSin = Math.sin(alpha) * coef;
+  const sSin = Math.sin(alpha) * coef;  
 
   if (mode === 'cab') {
-    // Cavalier: Front plane (XY in ThreeJS) is True Magnitude. Shear Depth (Z) onto X and Y.
     m.set(
       1, 0, sCos, 0,
       0, 1, sSin, 0,
-      0, 0, 1,    0,
-      0, 0, 0,    1
+      0, 0, 1, 0,
+      0, 0, 0, 1
     );
   } else if (mode === 'mil') {
-    // Military: Floor plane (XZ in ThreeJS) is True Magnitude. Shear Height (Y) onto X and Z.
     m.set(
-      1, sCos,  0, 0,
-      0, 1,     0, 0,
-      0, -sSin, 1, 0, // Negative Z shifts the view "up" visually on screen
-      0, 0,     0, 1
+      1, sCos, 0, 0,
+      0, 1, 0, 0,
+      0, -sSin, 1, 0,
+      0, 0, 0, 1
     );
   }
+
   return m;
 }
 
-/**
- * Projects 3D block coordinates to strict 2D space (True Magnitude) for INEN SVGs.
- */
 type Point3 = [number, number, number];
 
 function mapToView(p: Point3, view: ViewType) {
@@ -44,15 +40,12 @@ function mapToView(p: Point3, view: ViewType) {
   let v = 0;
 
   if (view === 'front') {
-    // Front view: X horizontal, Z vertical.
     u = p[0];
     v = -p[2];
   } else if (view === 'top') {
-    // Top view (first-angle unfolded below front): X horizontal, depth down.
     u = p[0];
     v = p[1];
   } else {
-    // Left profile in first-angle: depth axis mirrored on sheet.
     u = -p[1];
     v = -p[2];
   }
@@ -60,43 +53,66 @@ function mapToView(p: Point3, view: ViewType) {
   return { u, v };
 }
 
-export function projectTo2D(blocks: BlockData[], view: ViewType, scale: number = 3.0) {
-  const CX = 150; // SVG Center X
-  const CY = 150; // SVG Center Y
+function getFigureWireframe(figure: FigureData) {
+  const hw = figure.w / 2;
+  const hd = figure.d / 2;
+  const hh = figure.h / 2;
 
-  return blocks.flatMap(b => {
-    const hw = b.w / 2;
-    const hd = b.d / 2;
-    const hh = b.h / 2;
-
-    // 8 Corners in local math (Syllabus: X=Width, Y=Depth, Z=Height)
+  if (figure.kind === 'box') {
     const corners: Point3[] = [
-      [b.x - hw, b.y - hd, b.z - hh], [b.x + hw, b.y - hd, b.z - hh], // Bottom Front
-      [b.x + hw, b.y + hd, b.z - hh], [b.x - hw, b.y + hd, b.z - hh], // Bottom Back
-      [b.x - hw, b.y - hd, b.z + hh], [b.x + hw, b.y - hd, b.z + hh], // Top Front
-      [b.x + hw, b.y + hd, b.z + hh], [b.x - hw, b.y + hd, b.z + hh]  // Top Back
+      [figure.x - hw, figure.y - hd, figure.z - hh], [figure.x + hw, figure.y - hd, figure.z - hh],
+      [figure.x + hw, figure.y + hd, figure.z - hh], [figure.x - hw, figure.y + hd, figure.z - hh],
+      [figure.x - hw, figure.y - hd, figure.z + hh], [figure.x + hw, figure.y - hd, figure.z + hh],
+      [figure.x + hw, figure.y + hd, figure.z + hh], [figure.x - hw, figure.y + hd, figure.z + hh]
     ];
 
-    const edges = [
-      [0,1], [1,2], [2,3], [3,0], // Bottom
-      [4,5], [5,6], [6,7], [7,4], // Top
-      [0,4], [1,5], [2,6], [3,7]  // Vertical Pillars
+    const edges: Array<[number, number]> = [
+      [0, 1], [1, 2], [2, 3], [3, 0],
+      [4, 5], [5, 6], [6, 7], [7, 4],
+      [0, 4], [1, 5], [2, 6], [3, 7]
     ];
 
-    return edges.map(([s, e], idx) => {
-      const pt1 = corners[s!];
-      const pt2 = corners[e!];
+    return { corners, edges };
+  }
 
-      const c1uv = mapToView(pt1!, view);
-      const c2uv = mapToView(pt2!, view);
-      const c1 = { u: CX + c1uv.u * scale, v: CY + c1uv.v * scale };
-      const c2 = { u: CX + c2uv.u * scale, v: CY + c2uv.v * scale };
+  const corners: Point3[] = [
+    [figure.x - hw, figure.y - hd, figure.z - hh],
+    [figure.x + hw, figure.y - hd, figure.z - hh],
+    [figure.x, figure.y - hd, figure.z + hh],
+    [figure.x - hw, figure.y + hd, figure.z - hh],
+    [figure.x + hw, figure.y + hd, figure.z - hh],
+    [figure.x, figure.y + hd, figure.z + hh]
+  ];
 
-      if (Math.abs(c1.u - c2.u) < 0.001 && Math.abs(c1.v - c2.v) < 0.001) {
-        return null;
-      }
+  const edges: Array<[number, number]> = [
+    [0, 1], [1, 2], [2, 0],
+    [3, 4], [4, 5], [5, 3],
+    [0, 3], [1, 4], [2, 5]
+  ];
 
-      return { id: `${b.id}-${idx}`, x1: c1.u, y1: c1.v, x2: c2.u, y2: c2.v };
-    }).filter((line): line is { id: string; x1: number; y1: number; x2: number; y2: number } => line !== null);
+  return { corners, edges };
+}
+
+export function projectTo2D(figures: FigureData[], view: ViewType, scale: number = 3.0) {
+  const cx = 150;
+  const cy = 150;
+
+  return figures.flatMap((figure) => {
+    const { corners, edges } = getFigureWireframe(figure);
+
+    return edges
+      .map(([s, e], idx) => {
+        const c1uv = mapToView(corners[s]!, view);
+        const c2uv = mapToView(corners[e]!, view);
+        const c1 = { u: cx + c1uv.u * scale, v: cy + c1uv.v * scale };
+        const c2 = { u: cx + c2uv.u * scale, v: cy + c2uv.v * scale };
+
+        if (Math.abs(c1.u - c2.u) < 0.001 && Math.abs(c1.v - c2.v) < 0.001) {
+          return null;
+        }
+
+        return { id: `${figure.id}-${idx}`, x1: c1.u, y1: c1.v, x2: c2.u, y2: c2.v };
+      })
+      .filter((line): line is { id: string; x1: number; y1: number; x2: number; y2: number } => line !== null);
   });
 }
