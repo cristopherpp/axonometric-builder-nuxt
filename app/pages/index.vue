@@ -1,8 +1,9 @@
 ﻿<script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import type { FigureData, FigureKind, ProjectionId } from '~/types';
 import TechnicalSVG from '~/components/TechnicalSVG.vue';
 import AxonometricScene from '~/components/AxonometricScene.vue';
+import { getRecommendedProjectionCoefficient } from '~/utils/geometry';
 
 const MIN_SIZE = 1;
 let nextFigureId = 1;
@@ -93,6 +94,12 @@ const addComplexFigure = () => {
 const removeFigure = (id: number) => {
   figures.value = figures.value.filter((f) => f.id !== id);
 };
+
+watch(mode, (nextMode, previousMode) => {
+  if (nextMode === previousMode || nextMode === 'iso') return;
+
+  coef.value = getRecommendedProjectionCoefficient(nextMode);
+});
 </script>
 
 <template>
@@ -113,7 +120,10 @@ const removeFigure = (id: number) => {
 
           <div v-if="mode !== 'iso'" class="p-3 bg-blue-900/20 border border-blue-500/30 rounded">
             <label class="text-xs text-blue-300 block mb-2">Coeficiente de reduccion: {{ coef }}</label>
-            <input type="range" min="0.25" max="1" step="0.05" v-model.number="coef" class="w-full" />
+            <input type="range" min="0" max="1" step="0.05" v-model.number="coef" class="w-full" />
+            <p class="mt-2 text-[11px] text-slate-300">
+              {{ mode === 'cab' ? 'Valor tecnico recomendado: 0.5 para caballera reducida.' : 'Valor tecnico recomendado: 0.67 para militar reducida.' }}
+            </p>
           </div>
         </div>
 
@@ -197,7 +207,7 @@ const removeFigure = (id: number) => {
       >
         <section class="w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
           <header class="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-            <h3 class="text-sm font-semibold text-slate-100">Visual Settings</h3>
+            <h3 class="text-sm font-semibold text-slate-100">Configuración</h3>
             <button class="text-slate-300 hover:text-white" @click="showSettings = false">x</button>
           </header>
           <div class="px-4 py-4 space-y-4">
@@ -212,7 +222,7 @@ const removeFigure = (id: number) => {
           </div>
           <footer class="flex justify-end border-t border-slate-700 px-4 py-3">
             <button class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold hover:bg-blue-500" @click="showSettings = false">
-              Apply
+              Aceptar
             </button>
           </footer>
         </section>

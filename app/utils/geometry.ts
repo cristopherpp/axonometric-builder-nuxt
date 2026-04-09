@@ -2,6 +2,9 @@
 import * as THREE from 'three';
 import type { FigureData, ProjectionId, ViewType } from '~/types';
 
+const CABINET_REDUCTION = 0.5;
+const SHORTENED_PLANOMETRIC_REDUCTION = 2 / 3;
+
 /**
  * Generates Shear Matrices for Oblique Projections (Cavalier / Military).
  * Does NOT scale the geometry, ensuring true geometric distortion.
@@ -25,12 +28,19 @@ export function getObliqueMatrix(mode: ProjectionId, coef: number): THREE.Matrix
     m.set(
       1, sCos, 0, 0,
       0, 1, 0, 0,
-      0, -sSin, 1, 0,
+      0, sSin, 1, 0,
       0, 0, 0, 1
     );
   }
 
   return m;
+}
+
+export function getRecommendedProjectionCoefficient(mode: ProjectionId) {
+  if (mode === 'cab') return CABINET_REDUCTION;
+  if (mode === 'mil') return SHORTENED_PLANOMETRIC_REDUCTION;
+
+  return 1;
 }
 
 type Point3 = [number, number, number];

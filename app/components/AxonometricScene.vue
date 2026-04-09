@@ -56,6 +56,9 @@ watch(() => [props.mode, cameraRef.value, controlsRef.value], () => {
   const ctr = controlsRef.value;
 
   ctr.reset();
+  ctr.enableRotate = props.mode === 'iso';
+  ctr.enablePan = true;
+  ctr.enableZoom = true;
   ctr.target.set(0, 0, 0);
   cam.up.set(0, 1, 0);
 
