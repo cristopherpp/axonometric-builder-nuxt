@@ -22,6 +22,7 @@ const mode = ref<ProjectionId>('iso');
 const coef = ref(0.5);
 const wireframe = ref(false);
 const showOrthographicViews = ref(false);
+const showAxes = ref(true);
 const showSettings = ref(false);
 
 const form = ref({ kind: 'box' as FigureKind, w: 20, d: 20, h: 20, x: 0, y: 0, z: 0 });
@@ -186,7 +187,7 @@ const removeFigure = (id: number) => {
         :class="showOrthographicViews ? '' : 'h-full w-full'"
       >
         <span class="absolute top-2 left-2 text-[10px] font-bold text-blue-300 bg-black/60 px-1.5 py-0.5 rounded shadow-sm z-10">AXONOMETRIA</span>
-        <AxonometricScene :figures="figures" :mode="mode" :coef="coef" :wireframe="wireframe" />
+        <AxonometricScene :figures="figures" :mode="mode" :coef="coef" :wireframe="wireframe" :show-axes="showAxes" />
       </div>
 
       <div
@@ -203,6 +204,10 @@ const removeFigure = (id: number) => {
             <label class="flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-800/70 px-3 py-2">
               <span class="text-sm text-slate-200">Show orthographic views</span>
               <input v-model="showOrthographicViews" type="checkbox" class="h-4 w-4 accent-emerald-500" />
+            </label>
+            <label class="flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-800/70 px-3 py-2">
+              <span class="text-sm text-slate-200">Show axes</span>
+              <input v-model="showAxes" type="checkbox" class="h-4 w-4 accent-emerald-500" />
             </label>
           </div>
           <footer class="flex justify-end border-t border-slate-700 px-4 py-3">

@@ -10,6 +10,7 @@ const props = defineProps<{
   mode: ProjectionId;
   coef: number;
   wireframe: boolean;
+  showAxes: boolean;
 }>();
 
 const groupRef = shallowRef<THREE.Group | null>(null);
@@ -99,6 +100,6 @@ watch(() => [props.mode, cameraRef.value, controlsRef.value], () => {
       </TresMesh>
     </TresGroup>
     
-    <TresAxesHelper :args="[50]" />
+    <TresAxesHelper v-if="showAxes" :args="[50]" />
   </TresCanvas>
 </template>
