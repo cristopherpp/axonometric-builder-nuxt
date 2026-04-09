@@ -41,10 +41,11 @@ watch(() => [props.mode, props.coef, groupRef.value], () => {
     const m = getObliqueMatrix(props.mode, props.coef);
     g.matrixAutoUpdate = false; // Take control away from Three.js
     g.matrix.copy(m);
-    g.updateMatrixWorld(true);
   } else {
     g.matrixAutoUpdate = true;
   }
+
+  g.updateMatrixWorld(true);
 }, { immediate: true });
 
 // Handle Camera Orientation based on Projection
@@ -92,9 +93,9 @@ watch(() => [props.mode, cameraRef.value, controlsRef.value], () => {
           v-else
           :args="[getPrismShape(figure.w, figure.h), { depth: figure.d, bevelEnabled: false }]"
         />
-        <TresMeshBasicMaterial v-if="wireframe" color="#475569" :wireframe="true" :transparent="true" :opacity="0.3" />
+        <TresMeshBasicMaterial v-if="wireframe" color="#e2e8f0" :transparent="true" :opacity="0.04" />
         <TresMeshStandardMaterial v-else :color="figure.color" :roughness="0.5" />
-        <Edges :color="wireframe ? '#333' : 'black'" :threshold="15" />
+        <Edges v-if="wireframe" color="#e2e8f0" :threshold="15" />
       </TresMesh>
     </TresGroup>
     
