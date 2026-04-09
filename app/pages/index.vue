@@ -164,7 +164,7 @@ const removeFigure = (id: number) => {
         class="absolute top-3 right-3 z-20 px-3 py-1.5 text-xs font-semibold rounded border border-slate-500 bg-slate-900/85 text-slate-100 hover:bg-slate-800"
         @click="showSettings = true"
       >
-        Settings
+        Configuración
       </button>
 
       <div v-if="showOrthographicViews" class="bg-slate-50 relative border border-slate-400">
@@ -202,11 +202,11 @@ const removeFigure = (id: number) => {
           </header>
           <div class="px-4 py-4 space-y-4">
             <label class="flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-800/70 px-3 py-2">
-              <span class="text-sm text-slate-200">Show orthographic views</span>
+              <span class="text-sm text-slate-200">Mostrar vistas ortogonales</span>
               <input v-model="showOrthographicViews" type="checkbox" class="h-4 w-4 accent-emerald-500" />
             </label>
             <label class="flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-800/70 px-3 py-2">
-              <span class="text-sm text-slate-200">Show axes</span>
+              <span class="text-sm text-slate-200">Mostrar ejes</span>
               <input v-model="showAxes" type="checkbox" class="h-4 w-4 accent-emerald-500" />
             </label>
           </div>
