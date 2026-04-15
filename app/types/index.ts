@@ -2,6 +2,8 @@
 export type ProjectionId = 'iso' | 'cab' | 'mil';
 export type ViewType = 'front' | 'top' | 'side';
 export type FigureKind = 'box' | 'tri_prism';
+export type PrismProfile = 'right' | 'isosceles';
+export type QuarterTurn = 0 | 90 | 180 | 270;
 
 interface BaseFigureData {
   id: number;
@@ -24,6 +26,10 @@ export interface TriPrismFigureData extends BaseFigureData {
   w: number; // Base width
   d: number; // Prism depth
   h: number; // Triangle height
+  profile: PrismProfile;
+  rotationX: QuarterTurn;
+  rotationY: QuarterTurn;
+  rotationZ: QuarterTurn;
 }
 
 export type FigureData = BoxFigureData | TriPrismFigureData;

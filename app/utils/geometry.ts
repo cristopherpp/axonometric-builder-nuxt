@@ -1,9 +1,121 @@
-﻿// utils/geometry.ts
 import * as THREE from 'three';
-import type { FigureData, ProjectionId, ViewType } from '~/types';
+import type { FigureData, PrismProfile, ProjectionId, TriPrismFigureData, ViewType } from '~/types';
 
 const CABINET_REDUCTION = 0.5;
 const SHORTENED_PLANOMETRIC_REDUCTION = 2 / 3;
+
+type Point3 = [number, number, number];
+type Point2 = [number, number];
+
+const BOX_EDGES: Array<[number, number]> = [
+  [0, 1], [1, 2], [2, 3], [3, 0],
+  [4, 5], [5, 6], [6, 7], [7, 4],
+  [0, 4], [1, 5], [2, 6], [3, 7]
+];
+
+const TRI_PRISM_EDGES: Array<[number, number]> = [
+  [0, 1], [1, 2], [2, 0],
+  [3, 4], [4, 5], [5, 3],
+  [0, 3], [1, 4], [2, 5]
+];
+
+function degreesToRadians(value: number) {
+  return value * (Math.PI / 180);
+}
+
+function mapToView(p: Point3, view: ViewType) {
+  let u = 0;
+  let v = 0;
+
+  if (view === 'front') {
+    u = p[0];
+    v = -p[2];
+  } else if (view === 'top') {
+    u = p[0];
+    v = p[1];
+  } else {
+    u = -p[1];
+    v = -p[2];
+  }
+
+  return { u, v };
+}
+
+function getFigureEdgeIndices(figure: FigureData) {
+  return figure.kind === 'box' ? BOX_EDGES : TRI_PRISM_EDGES;
+}
+
+function rotatePoint(point: Point3, figure: TriPrismFigureData): Point3 {
+  const vector = new THREE.Vector3(...point);
+  const rotation = new THREE.Euler(
+    degreesToRadians(figure.rotationX),
+    degreesToRadians(figure.rotationY),
+    degreesToRadians(figure.rotationZ),
+    'XYZ'
+  );
+
+  vector.applyEuler(rotation);
+
+  return [vector.x, vector.y, vector.z];
+}
+
+export function getPrismProfilePoints(profile: PrismProfile, w: number, h: number): Point2[] {
+  const hw = w / 2;
+  const hh = h / 2;
+
+  if (profile === 'right') {
+    return [
+      [-hw, -hh],
+      [hw, -hh],
+      [-hw, hh]
+    ];
+  }
+
+  return [
+    [-hw, -hh],
+    [hw, -hh],
+    [0, hh]
+  ];
+}
+
+export function getFigureVertices(figure: FigureData): Point3[] {
+  const hw = figure.w / 2;
+  const hd = figure.d / 2;
+  const hh = figure.h / 2;
+
+  if (figure.kind === 'box') {
+    return [
+      [figure.x - hw, figure.y - hd, figure.z - hh],
+      [figure.x + hw, figure.y - hd, figure.z - hh],
+      [figure.x + hw, figure.y + hd, figure.z - hh],
+      [figure.x - hw, figure.y + hd, figure.z - hh],
+      [figure.x - hw, figure.y - hd, figure.z + hh],
+      [figure.x + hw, figure.y - hd, figure.z + hh],
+      [figure.x + hw, figure.y + hd, figure.z + hh],
+      [figure.x - hw, figure.y + hd, figure.z + hh]
+    ];
+  }
+
+  const profilePoints = getPrismProfilePoints(figure.profile, figure.w, figure.h);
+  const localVertices: Point3[] = [
+    [profilePoints[0]![0], -hd, profilePoints[0]![1]],
+    [profilePoints[1]![0], -hd, profilePoints[1]![1]],
+    [profilePoints[2]![0], -hd, profilePoints[2]![1]],
+    [profilePoints[0]![0], hd, profilePoints[0]![1]],
+    [profilePoints[1]![0], hd, profilePoints[1]![1]],
+    [profilePoints[2]![0], hd, profilePoints[2]![1]]
+  ];
+
+  return localVertices.map((point) => {
+    const rotated = rotatePoint(point, figure);
+
+    return [
+      rotated[0] + figure.x,
+      rotated[1] + figure.y,
+      rotated[2] + figure.z
+    ];
+  });
+}
 
 /**
  * Generates Shear Matrices for Oblique Projections (Cavalier / Military).
@@ -15,7 +127,7 @@ export function getObliqueMatrix(mode: ProjectionId, coef: number): THREE.Matrix
 
   const alpha = Math.PI / 4;
   const sCos = Math.cos(alpha) * coef;
-  const sSin = Math.sin(alpha) * coef;  
+  const sSin = Math.sin(alpha) * coef;
 
   if (mode === 'cab') {
     m.set(
@@ -43,8 +155,6 @@ export function getRecommendedProjectionCoefficient(mode: ProjectionId) {
   return 1;
 }
 
-type Point3 = [number, number, number];
-
 export interface ProjectedLine2D {
   id: string;
   x1: number;
@@ -60,104 +170,16 @@ export interface DimensionLine2D extends ProjectedLine2D {
   rotate?: number;
 }
 
-function mapToView(p: Point3, view: ViewType) {
-  let u = 0;
-  let v = 0;
-
-  if (view === 'front') {
-    u = p[0];
-    v = -p[2];
-  } else if (view === 'top') {
-    u = p[0];
-    v = p[1];
-  } else {
-    u = -p[1];
-    v = -p[2];
-  }
-
-  return { u, v };
-}
-
 function getFigureWireframe(figure: FigureData) {
-  const hw = figure.w / 2;
-  const hd = figure.d / 2;
-  const hh = figure.h / 2;
-
-  if (figure.kind === 'box') {
-    const corners: Point3[] = [
-      [figure.x - hw, figure.y - hd, figure.z - hh], [figure.x + hw, figure.y - hd, figure.z - hh],
-      [figure.x + hw, figure.y + hd, figure.z - hh], [figure.x - hw, figure.y + hd, figure.z - hh],
-      [figure.x - hw, figure.y - hd, figure.z + hh], [figure.x + hw, figure.y - hd, figure.z + hh],
-      [figure.x + hw, figure.y + hd, figure.z + hh], [figure.x - hw, figure.y + hd, figure.z + hh]
-    ];
-
-    const edges: Array<[number, number]> = [
-      [0, 1], [1, 2], [2, 3], [3, 0],
-      [4, 5], [5, 6], [6, 7], [7, 4],
-      [0, 4], [1, 5], [2, 6], [3, 7]
-    ];
-
-    return { corners, edges };
-  }
-
-  const corners: Point3[] = [
-    [figure.x - hw, figure.y - hd, figure.z - hh],
-    [figure.x + hw, figure.y - hd, figure.z - hh],
-    [figure.x, figure.y - hd, figure.z + hh],
-    [figure.x - hw, figure.y + hd, figure.z - hh],
-    [figure.x + hw, figure.y + hd, figure.z - hh],
-    [figure.x, figure.y + hd, figure.z + hh]
-  ];
-
-  const edges: Array<[number, number]> = [
-    [0, 1], [1, 2], [2, 0],
-    [3, 4], [4, 5], [5, 3],
-    [0, 3], [1, 4], [2, 5]
-  ];
-
-  return { corners, edges };
+  return {
+    corners: getFigureVertices(figure),
+    edges: getFigureEdgeIndices(figure)
+  };
 }
 
 export function getFigureEdges3D(figure: FigureData) {
-  const hw = figure.w / 2;
-  const hd = figure.d / 2;
-  const hh = figure.h / 2;
-  let corners: Point3[];
-  let edges: Array<[number, number]>;
-
-  if (figure.kind === 'box') {
-    corners = [
-      [figure.x - hw, figure.z - hh, figure.y - hd],
-      [figure.x + hw, figure.z - hh, figure.y - hd],
-      [figure.x + hw, figure.z + hh, figure.y - hd],
-      [figure.x - hw, figure.z + hh, figure.y - hd],
-      [figure.x - hw, figure.z - hh, figure.y + hd],
-      [figure.x + hw, figure.z - hh, figure.y + hd],
-      [figure.x + hw, figure.z + hh, figure.y + hd],
-      [figure.x - hw, figure.z + hh, figure.y + hd]
-    ];
-
-    edges = [
-      [0, 1], [1, 2], [2, 3], [3, 0],
-      [4, 5], [5, 6], [6, 7], [7, 4],
-      [0, 4], [1, 5], [2, 6], [3, 7]
-    ];
-  } else {
-    corners = [
-      [figure.x - hw, figure.z - hh, figure.y - hd],
-      [figure.x + hw, figure.z - hh, figure.y - hd],
-      [figure.x, figure.z + hh, figure.y - hd],
-      [figure.x - hw, figure.z - hh, figure.y + hd],
-      [figure.x + hw, figure.z - hh, figure.y + hd],
-      [figure.x, figure.z + hh, figure.y + hd]
-    ];
-
-    edges = [
-      [0, 1], [1, 2], [2, 0],
-      [3, 4], [4, 5], [5, 3],
-      [0, 3], [1, 4], [2, 5]
-    ];
-  }
+  const corners = getFigureVertices(figure).map(([x, y, z]) => [x, z, y] as Point3);
+  const edges = getFigureEdgeIndices(figure);
 
   return edges.map(([s, e], idx) => {
     const start = new THREE.Vector3(...corners[s]!);
@@ -207,16 +229,14 @@ function getFigureBounds(figures: FigureData[]) {
   let maxZ = -Infinity;
 
   for (const figure of figures) {
-    const hw = figure.w / 2;
-    const hd = figure.d / 2;
-    const hh = figure.h / 2;
-
-    minX = Math.min(minX, figure.x - hw);
-    maxX = Math.max(maxX, figure.x + hw);
-    minY = Math.min(minY, figure.y - hd);
-    maxY = Math.max(maxY, figure.y + hd);
-    minZ = Math.min(minZ, figure.z - hh);
-    maxZ = Math.max(maxZ, figure.z + hh);
+    for (const [x, y, z] of getFigureVertices(figure)) {
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
+    }
   }
 
   return { minX, maxX, minY, maxY, minZ, maxZ };

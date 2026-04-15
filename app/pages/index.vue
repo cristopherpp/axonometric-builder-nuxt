@@ -1,11 +1,29 @@
-﻿<script setup lang="ts">
-import { ref, watch } from 'vue';
-import type { FigureData, FigureKind, ProjectionId } from '~/types';
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import type { FigureData, FigureKind, PrismProfile, ProjectionId, QuarterTurn, TriPrismFigureData } from '~/types';
 import TechnicalSVG from '~/components/TechnicalSVG.vue';
 import AxonometricScene from '~/components/AxonometricScene.vue';
 import { getRecommendedProjectionCoefficient } from '~/utils/geometry';
 
 const MIN_SIZE = 1;
+const QUARTER_TURNS: QuarterTurn[] = [0, 90, 180, 270];
+
+type RotationAxis = 'rotationX' | 'rotationY' | 'rotationZ';
+
+interface BuilderForm {
+  kind: FigureKind;
+  w: number;
+  d: number;
+  h: number;
+  x: number;
+  y: number;
+  z: number;
+  prismProfile: PrismProfile;
+  prismRotationX: QuarterTurn;
+  prismRotationY: QuarterTurn;
+  prismRotationZ: QuarterTurn;
+}
+
 let nextFigureId = 1;
 
 const normalizeSize = (value: number) => {
@@ -14,6 +32,21 @@ const normalizeSize = (value: number) => {
 };
 
 const toHexColor = (value: number) => `#${Math.floor(value).toString(16).padStart(6, '0')}`;
+
+const getNextQuarterTurn = (value: QuarterTurn): QuarterTurn => {
+  const nextIndex = (QUARTER_TURNS.indexOf(value) + 1) % QUARTER_TURNS.length;
+  return QUARTER_TURNS[nextIndex]!;
+};
+
+const getRotationLabel = (value: QuarterTurn) => `${value}°`;
+
+const getPrismProfileLabel = (profile: PrismProfile) => profile === 'right' ? 'rectangulo' : 'isosceles';
+
+const describeFigure = (figure: FigureData) => {
+  if (figure.kind === 'box') return 'Bloque rectangular';
+
+  return `Prisma ${getPrismProfileLabel(figure.profile)} · X ${figure.rotationX}° · Y ${figure.rotationY}° · Z ${figure.rotationZ}°`;
+};
 
 const figures = ref<FigureData[]>([
   { id: nextFigureId++, kind: 'box', x: 0, y: 0, z: 10, w: 20, d: 20, h: 20, color: '#3b82f6' }
@@ -26,16 +59,34 @@ const showOrthographicViews = ref(false);
 const showAxes = ref(true);
 const showSettings = ref(false);
 
-const form = ref({ kind: 'box' as FigureKind, w: 20, d: 20, h: 20, x: 0, y: 0, z: 0 });
+const form = ref<BuilderForm>({
+  kind: 'box',
+  w: 20,
+  d: 20,
+  h: 20,
+  x: 0,
+  y: 0,
+  z: 0,
+  prismProfile: 'right',
+  prismRotationX: 0,
+  prismRotationY: 0,
+  prismRotationZ: 0
+});
+
+const isPrismForm = computed(() => form.value.kind === 'tri_prism');
+
+const prismOrientationSummary = computed(() => {
+  if (!isPrismForm.value) return '';
+
+  return `Perfil ${getPrismProfileLabel(form.value.prismProfile)} · X ${getRotationLabel(form.value.prismRotationX)} · Y ${getRotationLabel(form.value.prismRotationY)} · Z ${getRotationLabel(form.value.prismRotationZ)}`;
+});
 
 const addFigure = () => {
   const w = normalizeSize(form.value.w);
   const d = normalizeSize(form.value.d);
   const h = normalizeSize(form.value.h);
-
-  figures.value.push({
+  const baseFigure = {
     id: nextFigureId++,
-    kind: form.value.kind,
     x: Number(form.value.x) || 0,
     y: Number(form.value.y) || 0,
     z: (Number(form.value.z) || 0) + (h / 2),
@@ -43,7 +94,23 @@ const addFigure = () => {
     d,
     h,
     color: toHexColor(Math.random() * 0xffffff)
-  });
+  };
+
+  if (form.value.kind === 'box') {
+    figures.value.push({
+      ...baseFigure,
+      kind: 'box'
+    });
+  } else {
+    figures.value.push({
+      ...baseFigure,
+      kind: 'tri_prism',
+      profile: form.value.prismProfile,
+      rotationX: form.value.prismRotationX,
+      rotationY: form.value.prismRotationY,
+      rotationZ: form.value.prismRotationZ
+    });
+  }
 
   form.value.w = w;
   form.value.d = d;
@@ -60,39 +127,66 @@ const addComplexFigure = () => {
       kind: 'box',
       x: originX,
       y: originY,
-      z: 10,
-      w: 32,
-      d: 20,
-      h: 20,
-      color: '#22c55e'
-    },
-    {
-      id: nextFigureId++,
-      kind: 'box',
-      x: originX + 10,
-      y: originY,
-      z: 28,
-      w: 12,
-      d: 20,
-      h: 16,
-      color: '#16a34a'
+      z: 9,
+      w: 34,
+      d: 24,
+      h: 18,
+      color: '#2563eb'
     },
     {
       id: nextFigureId++,
       kind: 'tri_prism',
-      x: originX - 10,
+      x: originX,
       y: originY,
-      z: 30,
-      w: 18,
+      z: 27,
+      w: 34,
+      d: 24,
+      h: 14,
+      color: '#f59e0b',
+      profile: 'isosceles',
+      rotationX: 0,
+      rotationY: 0,
+      rotationZ: 0
+    },
+    {
+      id: nextFigureId++,
+      kind: 'tri_prism',
+      x: originX - 20,
+      y: originY + 10,
+      z: 10,
+      w: 16,
       d: 20,
       h: 20,
-      color: '#f59e0b'
+      color: '#22c55e',
+      profile: 'right',
+      rotationX: 0,
+      rotationY: 90,
+      rotationZ: 0
     }
   );
 };
 
 const removeFigure = (id: number) => {
   figures.value = figures.value.filter((f) => f.id !== id);
+};
+
+const cycleFormPrismRotation = (axis: RotationAxis) => {
+  if (!isPrismForm.value) return;
+
+  if (axis === 'rotationX') form.value.prismRotationX = getNextQuarterTurn(form.value.prismRotationX);
+  if (axis === 'rotationY') form.value.prismRotationY = getNextQuarterTurn(form.value.prismRotationY);
+  if (axis === 'rotationZ') form.value.prismRotationZ = getNextQuarterTurn(form.value.prismRotationZ);
+};
+
+const rotatePrism = (id: number, axis: RotationAxis) => {
+  figures.value = figures.value.map((figure) => {
+    if (figure.id !== id || figure.kind !== 'tri_prism') return figure;
+
+    return {
+      ...figure,
+      [axis]: getNextQuarterTurn(figure[axis])
+    } as TriPrismFigureData;
+  });
 };
 
 watch(mode, (nextMode, previousMode) => {
@@ -135,7 +229,10 @@ watch(mode, (nextMode, previousMode) => {
       </div>
 
       <div class="p-5 space-y-4">
-        <h3 class="text-xs font-bold text-slate-500 uppercase">Constructor</h3>
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-slate-500 uppercase">Constructor</h3>
+          <span v-if="isPrismForm" class="text-[10px] text-amber-300">Prisma avanzado</span>
+        </div>
 
         <div>
           <label class="text-[10px] text-slate-400">Tipo de figura</label>
@@ -155,20 +252,87 @@ watch(mode, (nextMode, previousMode) => {
           <div class="flex flex-col"><label class="text-[10px] text-slate-400">Pos Z</label><input type="number" v-model.number="form.z" class="bg-slate-700 p-1 text-xs rounded" /></div>
         </div>
 
-        <UTooltip text="Agregar una figura con las medidas actuales">
+        <div v-if="isPrismForm" class="space-y-3 rounded border border-amber-500/30 bg-amber-950/20 p-3">
+          <div>
+            <label class="text-[10px] text-amber-200 uppercase">Perfil del prisma</label>
+            <select v-model="form.prismProfile" class="w-full mt-1 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-white">
+              <option value="right">Triangulo rectangulo</option>
+              <option value="isosceles">Triangulo isosceles</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="rounded bg-slate-900/50 p-2 text-center">
+              <div class="text-[10px] text-slate-400">Giro X</div>
+              <div class="text-xs font-semibold text-white">{{ getRotationLabel(form.prismRotationX) }}</div>
+              <UTooltip text="Rotar el prisma 90 grados sobre el eje X">
+                <button class="mt-2 w-full rounded border border-slate-600 px-2 py-1 text-[10px] hover:bg-slate-700" @click="cycleFormPrismRotation('rotationX')">
+                  +90°
+                </button>
+              </UTooltip>
+            </div>
+            <div class="rounded bg-slate-900/50 p-2 text-center">
+              <div class="text-[10px] text-slate-400">Giro Y</div>
+              <div class="text-xs font-semibold text-white">{{ getRotationLabel(form.prismRotationY) }}</div>
+              <UTooltip text="Rotar el prisma 90 grados sobre el eje Y">
+                <button class="mt-2 w-full rounded border border-slate-600 px-2 py-1 text-[10px] hover:bg-slate-700" @click="cycleFormPrismRotation('rotationY')">
+                  +90°
+                </button>
+              </UTooltip>
+            </div>
+            <div class="rounded bg-slate-900/50 p-2 text-center">
+              <div class="text-[10px] text-slate-400">Giro Z</div>
+              <div class="text-xs font-semibold text-white">{{ getRotationLabel(form.prismRotationZ) }}</div>
+              <UTooltip text="Rotar el prisma 90 grados sobre el eje Z">
+                <button class="mt-2 w-full rounded border border-slate-600 px-2 py-1 text-[10px] hover:bg-slate-700" @click="cycleFormPrismRotation('rotationZ')">
+                  +90°
+                </button>
+              </UTooltip>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-slate-300">
+            {{ prismOrientationSummary }}
+          </p>
+        </div>
+
+        <UTooltip :text="isPrismForm ? 'Agregar el prisma configurado al modelo' : 'Agregar una figura con las medidas actuales'">
           <button @click="addFigure" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-bold shadow">+ Anadir figura</button>
         </UTooltip>
-        <UTooltip text="Insertar una composicion de ejemplo">
+        <UTooltip text="Insertar una composicion de ejemplo con prismas orientados">
           <button @click="addComplexFigure" class="w-full py-2 bg-amber-600 hover:bg-amber-500 rounded text-sm font-bold shadow">+ Anadir ejemplo complejo</button>
         </UTooltip>
 
-        <div class="space-y-1 mt-4">
-          <div v-for="(f, idx) in figures" :key="f.id" class="flex items-center gap-2 bg-slate-700 p-1.5 rounded text-xs">
-            <input type="color" v-model="f.color" class="w-5 h-5 rounded cursor-pointer border-none bg-transparent" />
-            <span class="flex-1 text-slate-300">{{ idx + 1 }}. {{ f.kind === 'box' ? 'Bloque' : 'Prisma triangular' }}</span>
-            <UTooltip text="Eliminar esta figura">
-              <button @click="removeFigure(f.id)" class="text-slate-400 hover:text-red-400 px-2 font-bold">x</button>
-            </UTooltip>
+        <div class="space-y-2 mt-4">
+          <div v-for="(f, idx) in figures" :key="f.id" class="bg-slate-700 p-2 rounded text-xs">
+            <div class="flex items-start gap-2">
+              <input type="color" v-model="f.color" class="w-5 h-5 rounded cursor-pointer border-none bg-transparent mt-0.5" />
+              <div class="flex-1 min-w-0">
+                <div class="text-slate-200">{{ idx + 1 }}. {{ describeFigure(f) }}</div>
+                <div class="text-[10px] text-slate-400">W {{ f.w }} · D {{ f.d }} · H {{ f.h }}</div>
+              </div>
+              <UTooltip text="Eliminar esta figura">
+                <button @click="removeFigure(f.id)" class="text-slate-400 hover:text-red-400 px-2 font-bold">x</button>
+              </UTooltip>
+            </div>
+
+            <div v-if="f.kind === 'tri_prism'" class="mt-2 grid grid-cols-3 gap-2">
+              <UTooltip text="Rotar este prisma 90 grados sobre X">
+                <button class="rounded border border-slate-600 px-2 py-1 text-[10px] hover:bg-slate-600" @click="rotatePrism(f.id, 'rotationX')">
+                  Giro X
+                </button>
+              </UTooltip>
+              <UTooltip text="Rotar este prisma 90 grados sobre Y">
+                <button class="rounded border border-slate-600 px-2 py-1 text-[10px] hover:bg-slate-600" @click="rotatePrism(f.id, 'rotationY')">
+                  Giro Y
+                </button>
+              </UTooltip>
+              <UTooltip text="Rotar este prisma 90 grados sobre Z">
+                <button class="rounded border border-slate-600 px-2 py-1 text-[10px] hover:bg-slate-600" @click="rotatePrism(f.id, 'rotationZ')">
+                  Giro Z
+                </button>
+              </UTooltip>
+            </div>
           </div>
         </div>
       </div>
