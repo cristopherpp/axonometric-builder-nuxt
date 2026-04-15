@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { FigureData, FigureKind, PrismProfile, ProjectionId, QuarterTurn, TriPrismFigureData } from '~/types';
-import TechnicalSVG from '~/components/TechnicalSVG.vue';
 import AxonometricScene from '~/components/AxonometricScene.vue';
+import TechnicalSVG from '~/components/TechnicalSVG.vue';
 import { getRecommendedProjectionCoefficient } from '~/utils/geometry';
 
 const MIN_SIZE = 1;
