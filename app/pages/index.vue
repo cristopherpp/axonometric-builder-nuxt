@@ -127,9 +127,11 @@ watch(mode, (nextMode, previousMode) => {
           </div>
         </div>
 
-        <button @click="wireframe = !wireframe" class="w-full py-2 text-xs border border-slate-600 rounded hover:bg-slate-700 transition">
-          Modo: {{ wireframe ? 'Alambrico' : 'Solido' }}
-        </button>
+        <UTooltip :text="wireframe ? 'Cambiar a vista solida' : 'Cambiar a vista alambrica'">
+          <button @click="wireframe = !wireframe" class="w-full py-2 text-xs border border-slate-600 rounded hover:bg-slate-700 transition">
+            Modo: {{ wireframe ? 'Alambrico' : 'Solido' }}
+          </button>
+        </UTooltip>
       </div>
 
       <div class="p-5 space-y-4">
@@ -153,14 +155,20 @@ watch(mode, (nextMode, previousMode) => {
           <div class="flex flex-col"><label class="text-[10px] text-slate-400">Pos Z</label><input type="number" v-model.number="form.z" class="bg-slate-700 p-1 text-xs rounded" /></div>
         </div>
 
-        <button @click="addFigure" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-bold shadow">+ Anadir figura</button>
-        <button @click="addComplexFigure" class="w-full py-2 bg-amber-600 hover:bg-amber-500 rounded text-sm font-bold shadow">+ Anadir ejemplo complejo</button>
+        <UTooltip text="Agregar una figura con las medidas actuales">
+          <button @click="addFigure" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-bold shadow">+ Anadir figura</button>
+        </UTooltip>
+        <UTooltip text="Insertar una composicion de ejemplo">
+          <button @click="addComplexFigure" class="w-full py-2 bg-amber-600 hover:bg-amber-500 rounded text-sm font-bold shadow">+ Anadir ejemplo complejo</button>
+        </UTooltip>
 
         <div class="space-y-1 mt-4">
           <div v-for="(f, idx) in figures" :key="f.id" class="flex items-center gap-2 bg-slate-700 p-1.5 rounded text-xs">
             <input type="color" v-model="f.color" class="w-5 h-5 rounded cursor-pointer border-none bg-transparent" />
             <span class="flex-1 text-slate-300">{{ idx + 1 }}. {{ f.kind === 'box' ? 'Bloque' : 'Prisma triangular' }}</span>
-            <button @click="removeFigure(f.id)" class="text-slate-400 hover:text-red-400 px-2 font-bold">x</button>
+            <UTooltip text="Eliminar esta figura">
+              <button @click="removeFigure(f.id)" class="text-slate-400 hover:text-red-400 px-2 font-bold">x</button>
+            </UTooltip>
           </div>
         </div>
       </div>
@@ -170,12 +178,14 @@ watch(mode, (nextMode, previousMode) => {
       class="flex-1 p-1 bg-slate-600"
       :class="showOrthographicViews ? 'grid grid-cols-2 grid-rows-2 gap-1' : 'relative'"
     >
-      <button
-        class="absolute top-3 right-3 z-20 px-3 py-1.5 text-xs font-semibold rounded border border-slate-500 bg-slate-900/85 text-slate-100 hover:bg-slate-800"
-        @click="showSettings = true"
-      >
-        Configuración
-      </button>
+      <UTooltip text="Abrir opciones de visualizacion">
+        <button
+          class="absolute top-3 right-3 z-20 px-3 py-1.5 text-xs font-semibold rounded border border-slate-500 bg-slate-900/85 text-slate-100 hover:bg-slate-800"
+          @click="showSettings = true"
+        >
+          Configuración
+        </button>
+      </UTooltip>
 
       <div v-if="showOrthographicViews" class="bg-slate-50 relative border border-slate-400">
         <span class="absolute top-2 left-2 text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 shadow-sm">ALZADO (Frente)</span>
@@ -208,7 +218,9 @@ watch(mode, (nextMode, previousMode) => {
         <section class="w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
           <header class="flex items-center justify-between border-b border-slate-700 px-4 py-3">
             <h3 class="text-sm font-semibold text-slate-100">Configuración</h3>
-            <button class="text-slate-300 hover:text-white" @click="showSettings = false">x</button>
+            <UTooltip text="Cerrar configuracion">
+              <button class="text-slate-300 hover:text-white" @click="showSettings = false">x</button>
+            </UTooltip>
           </header>
           <div class="px-4 py-4 space-y-4">
             <label class="flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-800/70 px-3 py-2">
@@ -221,9 +233,11 @@ watch(mode, (nextMode, previousMode) => {
             </label>
           </div>
           <footer class="flex justify-end border-t border-slate-700 px-4 py-3">
-            <button class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold hover:bg-blue-500" @click="showSettings = false">
-              Aceptar
-            </button>
+            <UTooltip text="Guardar y cerrar">
+              <button class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold hover:bg-blue-500" @click="showSettings = false">
+                Aceptar
+              </button>
+            </UTooltip>
           </footer>
         </section>
       </div>
