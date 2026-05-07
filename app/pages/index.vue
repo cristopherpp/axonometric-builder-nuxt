@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import type { FigureData, FigureKind, PrismProfile, ProjectionId, QuarterTurn, TriPrismFigureData } from '~/types';
 import AxonometricScene from '~/components/AxonometricScene.vue';
 import TechnicalSVG from '~/components/TechnicalSVG.vue';
-import { getRecommendedProjectionCoefficient } from '~/utils/geometry';
+import { getAxonometricPreset } from '~/utils/geometry';
 
 const MIN_SIZE = 1;
 const QUARTER_TURNS: QuarterTurn[] = [0, 90, 180, 270];
@@ -53,11 +53,11 @@ const figures = ref<FigureData[]>([
 ]);
 
 const mode = ref<ProjectionId>('iso');
-const coef = ref(0.5);
 const wireframe = ref(false);
 const showOrthographicViews = ref(false);
 const showAxes = ref(true);
 const showSettings = ref(false);
+const projectionPreset = computed(() => getAxonometricPreset(mode.value));
 
 const form = ref<BuilderForm>({
   kind: 'box',
@@ -189,11 +189,6 @@ const rotatePrism = (id: number, axis: RotationAxis) => {
   });
 };
 
-watch(mode, (nextMode, previousMode) => {
-  if (nextMode === previousMode || nextMode === 'iso') return;
-
-  coef.value = getRecommendedProjectionCoefficient(nextMode);
-});
 </script>
 
 <template>
@@ -206,17 +201,16 @@ watch(mode, (nextMode, previousMode) => {
           <div>
             <label class="text-xs font-bold text-slate-400 uppercase">Sistema de proyeccion</label>
             <select v-model="mode" class="w-full mt-1 bg-slate-700 border border-slate-600 rounded px-2 py-2 text-sm text-white">
-              <option value="iso">Isometrica (Ortogonal)</option>
-              <option value="cab">Caballera (Frente VM)</option>
-              <option value="mil">Militar (Planta VM)</option>
+              <option value="iso">Isometrica</option>
+              <option value="dim">Dimetrica</option>
+              <option value="tri">Trimetrica</option>
             </select>
           </div>
 
-          <div v-if="mode !== 'iso'" class="p-3 bg-blue-900/20 border border-blue-500/30 rounded">
-            <label class="text-xs text-blue-300 block mb-2">Coeficiente de reduccion: {{ coef }}</label>
-            <input type="range" min="0" max="1" step="0.05" v-model.number="coef" class="w-full" />
-            <p class="mt-2 text-[11px] text-slate-300">
-              {{ mode === 'cab' ? 'Valor tecnico recomendado: 0.5 para caballera reducida.' : 'Valor tecnico recomendado: 0.67 para militar reducida.' }}
+          <div class="p-3 bg-blue-900/20 border border-blue-500/30 rounded">
+            <label class="text-xs text-blue-300 block mb-1">Vista activa: {{ projectionPreset.label }}</label>
+            <p class="text-[11px] text-slate-300">
+              {{ projectionPreset.description }}
             </p>
           </div>
         </div>
@@ -371,7 +365,7 @@ watch(mode, (nextMode, previousMode) => {
         :class="showOrthographicViews ? '' : 'h-full w-full'"
       >
         <span class="absolute top-2 left-2 text-[10px] font-bold text-blue-300 bg-black/60 px-1.5 py-0.5 rounded shadow-sm z-10">AXONOMETRIA</span>
-        <AxonometricScene :figures="figures" :mode="mode" :coef="coef" :wireframe="wireframe" :show-axes="showAxes" />
+        <AxonometricScene :figures="figures" :mode="mode" :wireframe="wireframe" :show-axes="showAxes" />
       </div>
 
       <div

@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import type { FigureData, PrismProfile, ProjectionId, TriPrismFigureData, ViewType } from '~/types';
 
-const CABINET_REDUCTION = 0.5;
-const SHORTENED_PLANOMETRIC_REDUCTION = 2 / 3;
-
 type Point3 = [number, number, number];
 type Point2 = [number, number];
 
@@ -117,42 +114,40 @@ export function getFigureVertices(figure: FigureData): Point3[] {
   });
 }
 
-/**
- * Generates Shear Matrices for Oblique Projections (Cavalier / Military).
- * Does NOT scale the geometry, ensuring true geometric distortion.
- */
-export function getObliqueMatrix(mode: ProjectionId, coef: number): THREE.Matrix4 {
-  const m = new THREE.Matrix4();
-  if (mode === 'iso') return m.identity();
-
-  const alpha = Math.PI / 4;
-  const sCos = Math.cos(alpha) * coef;
-  const sSin = Math.sin(alpha) * coef;
-
-  if (mode === 'cab') {
-    m.set(
-      1, 0, sCos, 0,
-      0, 1, sSin, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1
-    );
-  } else if (mode === 'mil') {
-    m.set(
-      1, sCos, 0, 0,
-      0, 1, 0, 0,
-      0, sSin, 1, 0,
-      0, 0, 0, 1
-    );
-  }
-
-  return m;
+export interface AxonometricPreset {
+  id: ProjectionId;
+  label: string;
+  description: string;
+  azimuthDeg: number;
+  elevationDeg: number;
 }
 
-export function getRecommendedProjectionCoefficient(mode: ProjectionId) {
-  if (mode === 'cab') return CABINET_REDUCTION;
-  if (mode === 'mil') return SHORTENED_PLANOMETRIC_REDUCTION;
+export const AXONOMETRIC_PRESETS: Record<ProjectionId, AxonometricPreset> = {
+  iso: {
+    id: 'iso',
+    label: 'Isometrica',
+    description: 'Los tres ejes principales usan la misma reduccion visual.',
+    azimuthDeg: 45,
+    elevationDeg: 35.264389682754654
+  },
+  dim: {
+    id: 'dim',
+    label: 'Dimetrica',
+    description: 'Dos ejes comparten la misma reduccion y el tercero cambia.',
+    azimuthDeg: 45,
+    elevationDeg: 20
+  },
+  tri: {
+    id: 'tri',
+    label: 'Trimetrica',
+    description: 'Los tres ejes se perciben con reducciones diferentes.',
+    azimuthDeg: 60,
+    elevationDeg: 30
+  }
+};
 
-  return 1;
+export function getAxonometricPreset(mode: ProjectionId) {
+  return AXONOMETRIC_PRESETS[mode];
 }
 
 export interface ProjectedLine2D {
@@ -240,6 +235,21 @@ function getFigureBounds(figures: FigureData[]) {
   }
 
   return { minX, maxX, minY, maxY, minZ, maxZ };
+}
+
+export function getSceneBounds(figures: FigureData[]) {
+  const bounds = getFigureBounds(figures);
+
+  if (!bounds) return null;
+
+  const box = new THREE.Box3(
+    new THREE.Vector3(bounds.minX, bounds.minZ, bounds.minY),
+    new THREE.Vector3(bounds.maxX, bounds.maxZ, bounds.maxY)
+  );
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+
+  return { box, size, center };
 }
 
 export function getDimensionLines2D(

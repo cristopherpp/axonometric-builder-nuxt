@@ -1,5 +1,5 @@
 // types/index.ts
-export type ProjectionId = 'iso' | 'cab' | 'mil';
+export type ProjectionId = 'iso' | 'dim' | 'tri';
 export type ViewType = 'front' | 'top' | 'side';
 export type FigureKind = 'box' | 'tri_prism';
 export type PrismProfile = 'right' | 'isosceles';
