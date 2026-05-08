@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { OrbitControls } from '@tresjs/cientos';
 import * as THREE from 'three';
 import { getAxonometricPreset, getSceneBounds } from '~/utils/geometry';
@@ -20,8 +20,26 @@ const containerRef = ref<HTMLElement | null>(null);
 const cameraRef = shallowRef<THREE.OrthographicCamera | null>(null);
 const controlsRef = shallowRef<any>(null);
 const containerSize = ref({ width: 1, height: 1 });
+const controlsMouseButtons = computed(() => ({
+  LEFT: THREE.MOUSE.ROTATE,
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.PAN
+}));
+const controlsTouches = computed(() => ({
+  ONE: THREE.TOUCH.ROTATE,
+  TWO: THREE.TOUCH.DOLLY_PAN
+}));
 
 let resizeObserver: ResizeObserver | null = null;
+let lastFitSignature = '';
+
+function getControls() {
+  const controls = controlsRef.value;
+
+  if (!controls) return null;
+
+  return 'instance' in controls ? controls.instance : controls;
+}
 
 function updateContainerSize() {
   if (!containerRef.value) return;
@@ -59,10 +77,10 @@ function getBoundsCorners(bounds: THREE.Box3) {
 }
 
 function fitCameraToFigures() {
-  if (!cameraRef.value || !controlsRef.value) return;
+  if (!cameraRef.value) return;
 
   const cam = cameraRef.value;
-  const ctr = controlsRef.value;
+  const ctr = getControls();
   const aspect = containerSize.value.width / containerSize.value.height;
   const direction = getCameraDirection(props.mode);
   const sceneBounds = getSceneBounds(props.figures);
@@ -101,12 +119,28 @@ function fitCameraToFigures() {
   cam.zoom = Math.max(Math.min(zoomForWidth, zoomForHeight), 0.1);
   cam.updateProjectionMatrix();
 
-  ctr.reset();
-  ctr.enableRotate = false;
+  if (!ctr) return;
+
+  ctr.target.copy(center);
+  ctr.enableRotate = true;
   ctr.enablePan = true;
   ctr.enableZoom = true;
-  ctr.target.copy(center);
+  ctr.zoomSpeed = 1;
+  ctr.rotateSpeed = 0.9;
+  ctr.panSpeed = 0.8;
+  ctr.minZoom = 0.05;
+  ctr.maxZoom = 40;
+  ctr.saveState();
   ctr.update();
+}
+
+function getFitSignature() {
+  return JSON.stringify({
+    mode: props.mode,
+    width: containerSize.value.width,
+    height: containerSize.value.height,
+    figures: props.figures
+  });
 }
 
 onMounted(() => {
@@ -135,6 +169,11 @@ onBeforeUnmount(() => {
 watch(
   () => [props.mode, props.figures, cameraRef.value, controlsRef.value, containerSize.value.width, containerSize.value.height],
   () => {
+    const nextSignature = getFitSignature();
+
+    if (nextSignature === lastFitSignature) return;
+
+    lastFitSignature = nextSignature;
     fitCameraToFigures();
   },
   { immediate: true, deep: true }
@@ -145,7 +184,14 @@ watch(
   <div ref="containerRef" class="h-full w-full">
     <TresCanvas clear-color="#1e293b">
       <TresOrthographicCamera ref="cameraRef" />
-      <OrbitControls ref="controlsRef" />
+      <OrbitControls
+        ref="controlsRef"
+        :enable-damping="true"
+        :damping-factor="0.08"
+        :screen-space-panning="true"
+        :mouse-buttons="controlsMouseButtons"
+        :touches="controlsTouches"
+      />
 
       <TresAmbientLight :intensity="0.7" />
       <TresDirectionalLight :position="[10, 20, 10]" :intensity="1.2" />
